@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
-import { CFG, WAVES, WEAPONS, tempVec, segmentVec, pointVec, closestPoint } from './game/constants';
+import { CFG, WAVES, WEAPONS, _tempVec, _segmentVec, _pointVec, _closestPoint } from './game/constants';
 import type { GameState, InputState, Player } from './game/types';
 
 const state: GameState = {
@@ -18,6 +18,8 @@ const state: GameState = {
     grenadeCharge: 0, grenadeCooldown: 0,
     beamCharge: 0,
     isScoped: false,
+    paused: false,
+    timestop: false,
     timeScale: 1.0,
     dantes: { side: 0, cooldown: 0, active: false, activeTime: 0, idleTimer: 0, spinState: 0, recoilL: 0, recoilR: 0, canCancel: false },
     lazarus: { tier: 4, nextTier: 6, speedBoost: 0, dieMesh: null },
@@ -30,18 +32,19 @@ const state: GameState = {
 
 const input: InputState = { fwd: 0, str: 0, jump: false, sprint: false, fire: false, alt: false, sacred: false, pitch: 0, yaw: 0 };
 const player: Player = { pos: new THREE.Vector3(0, 10, 0), vel: new THREE.Vector3(), ground: false, height: 1.8, wallNormal: new THREE.Vector3() };
-let currentGunMesh = null;
-let sacredGroup = null;
+let currentGunMesh: THREE.Group | null = null;
+let sacredGroup: THREE.Group | null = null;
 
-const orbitalStrikes = [];
-const sacredProjectiles = [];
-const thrownBuildings = [];
+const orbitalStrikes: any[] = [];
+const sacredProjectiles: any[] = [];
+const thrownBuildings: any[] = [];
+let elapsedTime = 0;
 
 const Audio = {
     ctx: null, master: null, nextNoteTime: 0, beat: 0,
     init: function () {
         if (this.ctx) return;
-        window.AudioContext = window.AudioContext || window.webkitAudioContext;
+        window.AudioContext = window.AudioContext || window.AudioContext;
         this.ctx = new AudioContext();
         this.master = this.ctx.createGain(); this.master.gain.value = 0.3;
         this.master.connect(this.ctx.destination);
@@ -970,7 +973,7 @@ function fireWeapon(superCharge) {
     // MELEE (CALIBURN)
     if (state.currentWeapon.type === 'melee') {
         if (!state.melee.swinging) {
-            const now = clock.elapsedTime;
+            const now = elapsedTime;
             if (now < state.melee.nextAttackTime) return;
             state.melee.swinging = true;
             state.melee.swingTime = 0;
@@ -1121,14 +1124,21 @@ function reload() {
     }, state.currentWeapon.reloadTime * 1000);
 }
 
-const clock = new THREE.Timer(); let fireTimer = 0; let pathUpdateIdx = 0;
+let lastTime = performance.now();
+let fireTimer = 0;
+let pathUpdateIdx = 0;
 
 // --------------------------------------------------------------------------------
 // ANIMATE LOOP - FIXED BRACES AND LOGIC
 // --------------------------------------------------------------------------------
 function animate() {
     requestAnimationFrame(animate);
-    const realDt = Math.min(clock.getDelta(), 0.1); const dt = state.modes.timeStop ? 0 : (realDt * state.timeScale);
+    const currentTime = performance.now();
+    const realDt = Math.min((currentTime - lastTime) / 1000, 0.1);
+    elapsedTime += realDt;
+    lastTime = currentTime;
+
+    const dt = state.modes.timeStop ? 0 : (realDt * state.timeScale);
     particles.forEach(p => { if (!p.active) return; if (!state.modes.timeStop) { p.mesh.position.addScaledVector(p.vel, dt); p.life -= dt; p.mesh.scale.setScalar(p.life * 2); if (p.life <= 0) { p.active = false; p.mesh.visible = false; } } });
     if (!state.active) { renderer.render(scene, camera); return; }
 
@@ -1192,7 +1202,7 @@ function animate() {
         if (state.currentWeapon.id === 5) {
             const pivot = currentGunMesh.getObjectByName('sword_pivot');
             if (pivot) {
-                const now = clock.elapsedTime;
+                const now = elapsedTime;
                 if (!state.melee.swinging) {
                     if (now < state.melee.nextAttackTime) { document.getElementById('crosshair').style.borderColor = '#ff0000'; }
                     else { document.getElementById('crosshair').style.borderColor = '#00ff00'; }
@@ -1241,7 +1251,7 @@ function animate() {
                         else { qCurrent.setFromEuler(new THREE.Euler(1.2, 0, 0)); pCurrent.set(0, -0.8, -0.8); }
                     }
                     pivot.quaternion.copy(qCurrent); pivot.position.copy(pCurrent);
-                    if (t >= 1.0) { state.melee.swinging = false; const now = clock.elapsedTime; if (state.melee.combo === 0) { state.melee.nextAttackTime = now + 0.5; state.melee.combo = 1; } else if (state.melee.combo === 1) { state.melee.nextAttackTime = now + 0.6; state.melee.combo = 2; } else { state.melee.nextAttackTime = now + 1.5; state.melee.combo = 0; } }
+                    if (t >= 1.0) { state.melee.swinging = false; const now = elapsedTime; if (state.melee.combo === 0) { state.melee.nextAttackTime = now + 0.5; state.melee.combo = 1; } else if (state.melee.combo === 1) { state.melee.nextAttackTime = now + 0.6; state.melee.combo = 2; } else { state.melee.nextAttackTime = now + 1.5; state.melee.combo = 0; } }
                 } else {
                     const idleQ = new THREE.Quaternion().setFromEuler(new THREE.Euler(0.2, -0.5, 0.5)); const idleP = new THREE.Vector3(0.5, -0.4, -0.5); pivot.quaternion.slerp(idleQ, realDt * 3); pivot.position.lerp(idleP, realDt * 3);
                 }
@@ -1257,7 +1267,7 @@ function animate() {
     }
 
     // Update Sacred Visuals
-    if (state.sacred.active && sacredGroup) { sacredGroup.rotation.z += realDt * 0.5; const bob = Math.sin(clock.elapsedTime * 2) * 0.05; sacredGroup.position.y = bob; }
+    if (state.sacred.active && sacredGroup) { sacredGroup.rotation.z += realDt * 0.5; const bob = Math.sin(elapsedTime * 2) * 0.05; sacredGroup.position.y = bob; }
     if (state.dantes.cooldown > 0) state.dantes.cooldown -= realDt;
     if (state.dantes.active) { state.dantes.activeTime -= realDt; if (state.dantes.activeTime <= 0) { state.dantes.active = false; state.modes.timeStop = false; document.getElementById('timestop-overlay').className = ""; state.dantes.cooldown = 30.0; } else { document.getElementById('timestop-overlay').className = "timestop-active"; } }
 
@@ -1422,13 +1432,13 @@ function animate() {
                 const dir = new THREE.Vector3().subVectors(player.pos, e.group.position); const dist = dir.length(); dir.normalize();
                 if (dist > 30) e.vel.lerp(dir.multiplyScalar(e.speed), dt); else e.vel.lerp(new THREE.Vector3(0, 0, 0), dt);
                 e.group.position.addScaledVector(e.vel, dt);
-                e.group.position.y = 30 + Math.sin(clock.elapsedTime) * 5;
+                e.group.position.y = 30 + Math.sin(elapsedTime) * 5;
                 e.attackTimer += dt;
 
                 // BOSS ATTACK LOGIC: BULLET HELL SPIRAL
                 if (e.attackTimer > 0.8) {
                     e.attackTimer = 0;
-                    const projectiles = 12; const offsetAngle = clock.elapsedTime * 2.0;
+                    const projectiles = 12; const offsetAngle = elapsedTime * 2.0;
                     for (let k = 0; k < projectiles; k++) {
                         const angle = (k / projectiles) * Math.PI * 2 + offsetAngle;
                         const eb = enemyBullets.find(b => !b.active);

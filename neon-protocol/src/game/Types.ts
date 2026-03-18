@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import type { Weapon } from './Constants';
+import type { Weapon } from './constants';
 
 export interface GameState {
     active: boolean;
@@ -41,6 +41,8 @@ export interface GameState {
     grenadeCooldown: number;
     beamCharge: number;
     isScoped: boolean;
+    paused: boolean;
+    timestop: boolean;
     timeScale: number;
     dantes: {
         side: number;

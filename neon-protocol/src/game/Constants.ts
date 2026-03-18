@@ -40,7 +40,7 @@ export const WEAPONS = [
 export type Weapon = typeof WEAPONS[number];
 
 // Reusable vectors (export them so others can import and reuse)
-export const tempVec = new THREE.Vector3();
-export const segmentVec = new THREE.Vector3();
-export const pointVec = new THREE.Vector3();
-export const closestPoint = new THREE.Vector3();
+export const _tempVec = new THREE.Vector3();
+export const _segmentVec = new THREE.Vector3();
+export const _pointVec = new THREE.Vector3();
+export const _closestPoint = new THREE.Vector3();
