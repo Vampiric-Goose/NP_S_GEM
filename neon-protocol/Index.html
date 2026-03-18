@@ -4,16 +4,766 @@
 <head>
   <meta charset="UTF-8">
   <title>NEON PROTOCOL: DIVINE ARSENAL</title>
-  <style>
-    body {
-      margin: 0;
-      overflow: hidden;
-      background: #050011
+  <<style>
+    @import
+    url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Outfit:wght@300;600;900&family=VT323&display=swap');
+
+    :root {
+    --neon-cyan: #00ffff;
+    --neon-pink: #ff00ff;
+    --neon-blue: #0088ff;
+    --neon-red: #ff0055;
+    --glass-bg: rgba(10, 10, 25, 0.7);
+    --glass-border: rgba(0, 255, 255, 0.2);
+    --font-main: 'Outfit', sans-serif;
+    --font-accent: 'Orbitron', sans-serif;
     }
-  </style>
+
+    body {
+    margin: 0;
+    overflow: hidden;
+    background: #050011;
+    font-family: var(--font-main);
+    user-select: none;
+    color: #fff;
+    }
+
+    #ui {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 20;
+    }
+
+    /* CENTER HUD ELEMENTS */
+    #crosshair-wrapper {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    }
+
+    #crosshair {
+    width: 6px;
+    height: 6px;
+    background: #fff;
+    border-radius: 50%;
+    box-shadow: 0 0 15px #fff, 0 0 5px var(--neon-cyan);
+    z-index: 2;
+    }
+
+    #crosshair-ring {
+    position: absolute;
+    width: 32px;
+    height: 32px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-sizing: border-box;
+    }
+
+    #hud-center {
+    position: absolute;
+    top: calc(50% + 40px);
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 250px;
+    pointer-events: none;
+    text-align: center;
+    }
+
+    .bar-container {
+    width: 160px;
+    height: 6px;
+    background: rgba(0, 0, 0, 0.6);
+    border: 1px solid var(--glass-border);
+    border-radius: 10px;
+    margin-bottom: 6px;
+    overflow: hidden;
+    backdrop-filter: blur(4px);
+    }
+
+    #stamina-fill {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, var(--neon-cyan), var(--neon-blue));
+    box-shadow: 0 0 10px var(--neon-cyan);
+    transition: width 0.1s linear;
+    }
+
+    #charge-fill {
+    width: 0%;
+    height: 100%;
+    background: linear-gradient(90deg, #ffaa00, #ff0000);
+    box-shadow: 0 0 10px #ffaa00;
+    }
+
+    #buff-container {
+    font-family: var(--font-accent);
+    font-size: 24px;
+    color: var(--neon-red);
+    font-weight: 900;
+    text-shadow: 0 0 15px var(--neon-red);
+    display: none;
+    letter-spacing: 2px;
+    font-style: italic;
+    transition: transform 0.1s;
+    background: rgba(0, 0, 0, 0.4);
+    padding: 5px 15px;
+    border-radius: 20px;
+    border: 1px solid var(--neon-red);
+    }
+
+    #risk-warning {
+    font-size: 13px;
+    color: #ff3333;
+    display: none;
+    font-family: 'VT323';
+    letter-spacing: 2px;
+    text-shadow: 0 0 10px red;
+    background: rgba(0, 0, 0, 0.7);
+    padding: 4px 10px;
+    margin-top: 5px;
+    border: 1px solid rgba(255, 0, 0, 0.3);
+    }
+
+    #sacred-ui {
+    display: none;
+    margin-top: 15px;
+    font-family: var(--font-accent);
+    color: #aa00ff;
+    font-weight: 900;
+    text-shadow: 0 0 15px #aa00ff;
+    letter-spacing: 4px;
+    background: rgba(170, 0, 255, 0.1);
+    padding: 5px 20px;
+    border: 1px solid #aa00ff;
+    border-radius: 4px;
+    }
+
+    #infinity-ui {
+    display: none;
+    margin-top: 10px;
+    color: #ffffff;
+    font-weight: 900;
+    text-shadow: 0 0 20px #ffffff;
+    letter-spacing: 6px;
+    font-size: 16px;
+    animation: pulse-glow 2s infinite alternate;
+    }
+
+    @keyframes pulse-glow {
+    from {
+    opacity: 0.6;
+    }
+
+    to {
+    opacity: 1;
+    text-shadow: 0 0 30px #fff;
+    }
+    }
+
+    /* FIFTH MAGIC HUD */
+    #magic-circle {
+    display: none;
+    position: absolute;
+    top: 40%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 240px;
+    height: 240px;
+    border: 3px solid var(--neon-cyan);
+    border-radius: 50%;
+    box-shadow: 0 0 30px var(--neon-cyan), inset 0 0 30px var(--neon-cyan);
+    align-items: center;
+    justify-content: center;
+    flex-direction: row;
+    gap: 15px;
+    background: radial-gradient(circle, rgba(0, 40, 80, 0.9) 0%, rgba(5, 5, 20, 0.95) 100%);
+    backdrop-filter: blur(8px);
+    }
+
+    .rune {
+    width: 50px;
+    height: 50px;
+    border: 2px solid #fff;
+    color: #fff;
+    font-family: var(--font-accent);
+    font-size: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-shadow: 0 0 10px #fff;
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.05);
+    }
+
+    #hitmarker {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 40px;
+    height: 40px;
+    margin-top: -20px;
+    margin-left: -20px;
+    opacity: 0;
+    transition: opacity 0.05s ease-out, transform 0.1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    transform: rotate(45deg) scale(0.8);
+    pointer-events: none;
+    z-index: 1;
+    }
+
+    #hitmarker::before,
+    #hitmarker::after {
+    content: '';
+    position: absolute;
+    background: #fff;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 0 8px #fff;
+    }
+
+    #hitmarker::before {
+    width: 100%;
+    height: 2px;
+    }
+
+    #hitmarker::after {
+    width: 2px;
+    height: 100%;
+    }
+
+    #health-container {
+    position: absolute;
+    bottom: 40px;
+    left: 40px;
+    width: 350px;
+    height: 30px;
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    backdrop-filter: blur(10px);
+    transform: skewX(-15deg);
+    display: flex;
+    align-items: center;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    overflow: hidden;
+    }
+
+    #health-fill {
+    height: 100%;
+    width: 100%;
+    background: linear-gradient(90deg, #ff0044, #ff8800, #00ff88);
+    background-size: 300% 100%;
+    background-position: 100% 0;
+    transition: width 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+    box-shadow: 0 0 20px currentColor;
+    }
+
+    #health-text {
+    position: absolute;
+    bottom: 80px;
+    left: 40px;
+    color: #fff;
+    font-size: 32px;
+    font-family: var(--font-accent);
+    text-shadow: 0 0 20px var(--neon-cyan);
+    font-weight: 900;
+    }
+
+    #ammo-cnt {
+    position: absolute;
+    bottom: 30px;
+    right: 40px;
+    font-size: 90px;
+    font-family: var(--font-accent);
+    color: var(--neon-pink);
+    font-weight: 900;
+    text-shadow: 5px 5px 0px #000, 0 0 30px var(--neon-pink);
+    letter-spacing: -5px;
+    }
+
+    #score-cnt {
+    position: absolute;
+    top: 30px;
+    right: 40px;
+    font-size: 24px;
+    color: #ffff00;
+    text-shadow: 0 0 15px #ffff00;
+    text-align: right;
+    font-family: var(--font-accent);
+    }
+
+    #wave-cnt {
+    position: absolute;
+    top: 65px;
+    right: 40px;
+    font-size: 42px;
+    color: var(--neon-cyan);
+    font-weight: 900;
+    text-shadow: 0 0 20px var(--neon-cyan);
+    text-align: right;
+    font-family: var(--font-accent);
+    font-style: italic;
+    }
+
+    #grapple-ui {
+    position: absolute;
+    bottom: 140px;
+    right: 40px;
+    text-align: right;
+    font-size: 22px;
+    font-weight: bold;
+    display: none;
+    font-family: var(--font-accent);
+    }
+
+    #grapple-status {
+    color: #00ff00;
+    text-shadow: 0 0 15px #00ff00;
+    }
+
+    .cooldown {
+    color: #ff0000 !important;
+    text-shadow: 0 0 15px #ff0000 !important;
+    }
+
+    #boss-container {
+    position: absolute;
+    top: 100px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 800px;
+    height: 15px;
+    display: none;
+    background: rgba(0, 0, 0, 0.8);
+    border: 1px solid #ff0000;
+    backdrop-filter: blur(5px);
+    box-shadow: 0 0 30px rgba(255, 0, 0, 0.2);
+    }
+
+    #boss-fill {
+    height: 100%;
+    width: 100%;
+    background: linear-gradient(90deg, #550000, #ff0000);
+    box-shadow: 0 0 25px #ff0000;
+    transition: width 0.1s linear;
+    }
+
+    #boss-label {
+    position: absolute;
+    top: -35px;
+    left: 0;
+    width: 100%;
+    text-align: center;
+    color: #ff0000;
+    font-size: 20px;
+    font-weight: 900;
+    letter-spacing: 8px;
+    text-shadow: 0 0 15px #ff0000;
+    font-family: var(--font-accent);
+    }
+
+    #radar-container {
+    position: absolute;
+    top: 30px;
+    left: 30px;
+    width: 180px;
+    height: 180px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(0, 20, 40, 0.8) 0%, rgba(5, 10, 20, 0.9) 100%);
+    border: 2px solid var(--neon-cyan);
+    box-shadow: 0 0 25px rgba(0, 255, 255, 0.3), inset 0 0 30px rgba(0, 255, 255, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    backdrop-filter: blur(5px);
+    }
+
+    #radar-canvas {
+    width: 100%;
+    height: 100%;
+    }
+
+    #radar-container::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(180deg, rgba(0, 255, 255, 0) 0%, rgba(0, 255, 255, 0.2) 50%, rgba(0, 255, 255, 0) 100%);
+    background-size: 100% 200%;
+    animation: scan 3s linear infinite;
+    border-radius: 50%;
+    pointer-events: none;
+    }
+
+    @keyframes scan {
+    0% {
+    background-position: 0% 0%;
+    }
+
+    100% {
+    background-position: 0% 200%;
+    }
+    }
+
+    #timestop-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: transparent;
+    pointer-events: none;
+    transition: all 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+    z-index: 10;
+    }
+
+    .timestop-active {
+    backdrop-filter: grayscale(100%) invert(0.1) brightness(1.2);
+    background: radial-gradient(circle, transparent 0%, rgba(0, 0, 0, 0.5) 100%) !important;
+    }
+
+    #scope-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle, transparent 20%, rgba(0, 0, 0, 0.9) 70%);
+    pointer-events: none;
+    display: none;
+    background-image:
+    linear-gradient(rgba(0, 255, 255, 0.2) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 255, 255, 0.2) 1px, transparent 1px);
+    background-size: 60px 60px;
+    z-index: 18;
+    }
+
+    #scope-overlay::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 80%;
+    height: 2px;
+    background: var(--neon-cyan);
+    opacity: 0.3;
+    transform: translate(-50%, -50%);
+    }
+
+    #scope-overlay::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 2px;
+    height: 80%;
+    background: var(--neon-cyan);
+    opacity: 0.3;
+    transform: translate(-50%, -50%);
+    }
+
+    #overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle at center, rgba(10, 0, 30, 0.8) 0%, rgba(5, 0, 10, 1) 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    pointer-events: auto;
+    z-index: 99;
+    backdrop-filter: blur(15px);
+    }
+
+    h1 {
+    font-family: var(--font-accent);
+    font-size: 80px;
+    color: #fff;
+    margin: 0 0 30px 0;
+    text-shadow: 0 0 20px var(--neon-blue), 0 0 40px var(--neon-pink);
+    font-style: italic;
+    text-align: center;
+    letter-spacing: 15px;
+    animation: title-float 4s ease-in-out infinite alternate;
+    }
+
+    @keyframes title-float {
+    from {
+    transform: translateY(0px) scale(1);
+    }
+
+    to {
+    transform: translateY(-10px) scale(1.02);
+    }
+    }
+
+    #weapon-select {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 25px;
+    margin-top: 20px;
+    max-width: 900px;
+    }
+
+    .weapon-card {
+    border: 1px solid var(--glass-border);
+    background: var(--glass-bg);
+    padding: 24px;
+    width: 240px;
+    cursor: pointer;
+    transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+    text-align: left;
+    transform: skewX(-5deg);
+    backdrop-filter: blur(5px);
+    position: relative;
+    overflow: hidden;
+    }
+
+    .weapon-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+    transition: 0.5s;
+    }
+
+    .weapon-card:hover::before {
+    left: 100%;
+    }
+
+    .weapon-card:hover {
+    border-color: var(--neon-cyan);
+    background: rgba(0, 255, 255, 0.1);
+    transform: skewX(-5deg) translateY(-8px);
+    box-shadow: 0 20px 40px rgba(0, 255, 255, 0.2);
+    }
+
+    .weapon-card.selected {
+    border-color: var(--neon-pink);
+    background: rgba(255, 0, 255, 0.15);
+    box-shadow: 0 0 40px rgba(255, 0, 255, 0.3);
+    transform: skewX(-5deg) scale(1.05);
+    z-index: 2;
+    }
+
+    .w-title {
+    font-family: var(--font-accent);
+    font-size: 20px;
+    color: #fff;
+    margin-bottom: 8px;
+    font-weight: 900;
+    letter-spacing: 1px;
+    }
+
+    .w-desc {
+    font-size: 13px;
+    color: #ccc;
+    margin-bottom: 15px;
+    line-height: 1.4;
+    font-weight: 300;
+    }
+
+    .w-stat {
+    font-size: 11px;
+    color: var(--neon-cyan);
+    font-family: var(--font-accent);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    }
+
+    #terminal-container {
+    margin-top: 40px;
+    width: 500px;
+    background: rgba(0, 0, 0, 0.85);
+    border: 1px solid #333;
+    padding: 15px;
+    text-align: left;
+    box-shadow: 0 0 20px rgba(0, 255, 0, 0.1);
+    border-radius: 4px;
+    }
+
+    #cmd-input {
+    width: 100%;
+    background: transparent;
+    border: none;
+    color: #0f0;
+    font-family: 'VT323', monospace;
+    font-size: 24px;
+    outline: none;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    }
+
+    #cmd-feedback {
+    font-family: 'VT323', monospace;
+    font-size: 18px;
+    color: #ffff00;
+    min-height: 25px;
+    margin-top: 5px;
+    }
+
+    #start-btn {
+    margin-top: 50px;
+    padding: 20px 100px;
+    border: 1px solid #fff;
+    color: #fff;
+    background: transparent;
+    font-size: 28px;
+    font-weight: 900;
+    font-family: var(--font-accent);
+    cursor: pointer;
+    transition: all 0.3s;
+    text-transform: uppercase;
+    letter-spacing: 6px;
+    box-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
+    display: none;
+    position: relative;
+    overflow: hidden;
+    }
+
+    #start-btn:hover {
+    background: #fff;
+    color: #000;
+    box-shadow: 0 0 60px #fff;
+    letter-spacing: 10px;
+    }
+
+    canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 0;
+    }
+    </style>
 </head>
 
 <body>
+  <div id="damage-vignette"
+    style="position:absolute; top:0; left:0; width:100%; height:100%; background: radial-gradient(circle, transparent 50%, rgba(255, 0, 0, 0.4) 100%); opacity:0; pointer-events:none; transition:opacity 0.2s; z-index:15;">
+  </div>
+  <div id="wave-notification"
+    style="position:absolute; top:30%; width:100%; text-align:center; color:#ff0000; font-size:40px; font-weight:900; letter-spacing:10px; opacity:0; transition:opacity 0.5s; text-shadow:0 0 20px #ff0000; pointer-events:none; z-index:25;">
+    WAVE INITIALIZED</div>
+
+  <div id="ui">
+    <div id="crosshair-wrapper">
+      <div id="crosshair-ring"></div>
+      <div id="crosshair"></div>
+    </div>
+
+    <!-- CENTRAL HUD CONTAINER -->
+    <div id="hud-center">
+      <div class="bar-container">
+        <div id="stamina-fill"></div>
+      </div>
+      <div id="charge-bar-bg" class="bar-container" style="display:none;">
+        <div id="charge-fill"></div>
+      </div>
+      <div id="buff-container">AMP <span id="buff-val">1.0</span>X</div>
+      <div id="risk-warning">OVERLOADED: DMG AMP ACTIVE</div>
+      <div id="sacred-ui">BRIONAC // <span id="sacred-ammo">3</span></div>
+      <div id="infinity-ui">INFINITY PROTOCOL ACTIVE</div>
+
+      <div id="magic-circle">
+        <div id="rune-1" class="rune"></div>
+        <div id="rune-2" class="rune"></div>
+        <div id="rune-3" class="rune"></div>
+      </div>
+    </div>
+
+    <div id="hitmarker"></div>
+
+    <div id="health-container">
+      <div id="health-fill"></div>
+      <div id="health-text">100</div>
+    </div>
+
+    <div id="ammo-cnt">30</div>
+    <div id="score-cnt">SCORE: 0</div>
+    <div id="wave-cnt">WAVE 1</div>
+
+    <div id="grapple-ui">GRAPPLE: <span id="grapple-status">READY</span></div>
+
+    <div id="boss-container">
+      <div id="boss-label">OMEGA CLASS THREAT</div>
+      <div id="boss-fill"></div>
+    </div>
+
+    <div id="radar-container">
+      <canvas id="radar-canvas" width="160" height="160"></canvas>
+    </div>
+  </div>
+
+  <div id="timestop-overlay"></div>
+  <div id="scope-overlay"></div>
+
+  <div id="overlay">
+    <h1>NEON PROTOCOL</h1>
+    <div id="weapon-select">
+      <div class="weapon-card selected" onclick="selectWeapon(0)">
+        <div class="w-title">PLASMA RIFLE</div>
+        <div class="w-desc">Standard issue rapid fire energy weapon.</div>
+        <div class="w-stat">DMG: LOW | RATE: HIGH | ALT: GRENADE</div>
+      </div>
+      <div class="weapon-card" onclick="selectWeapon(1)">
+        <div class="w-title">VOID SHOTGUN</div>
+        <div class="w-desc">Close range dispersion cannon.</div>
+        <div class="w-stat">DMG: HIGH | RATE: SLOW | ALT: GRAPPLE</div>
+      </div>
+      <div class="weapon-card" onclick="selectWeapon(2)">
+        <div class="w-title">R.A.D.I.A.N.C.E.</div>
+        <div class="w-desc">Rail-Accelerated Directed Energy.</div>
+        <div class="w-stat">DMG: EXTREME | TYPE: BEAM | ALT: SCOPE</div>
+      </div>
+      <div class="weapon-card" onclick="selectWeapon(3)">
+        <div class="w-title">LAZARUS</div>
+        <div class="w-desc">Gambler's dice. Evolves on hit.</div>
+        <div class="w-stat">DMG: MED | RNG: CHAOS | ALT: GRAPPLE</div>
+      </div>
+      <div class="weapon-card" onclick="selectWeapon(4)">
+        <div class="w-title">DANTÈS</div>
+        <div class="w-desc">Dual-wielded chaotic hand cannons.</div>
+        <div class="w-stat">DMG: HIGH | STYLE: SSS | ALT: TIME STOP</div>
+      </div>
+      <div class="weapon-card" onclick="selectWeapon(5)">
+        <div class="w-title">CALIBURN</div>
+        <div class="w-desc">High-frequency blade. Stacking DMG AMP.</div>
+        <div class="w-stat">DMG: 2 | RISK: HIGH | ALT: NONE</div>
+      </div>
+    </div>
+
+    <div id="terminal-container">
+      <div style="color:#888; font-size:12px; margin-bottom:5px;">> TERMINAL_ACCESS</div>
+      <input type="text" id="cmd-input" placeholder="ENTER CLEARANCE CODE..." autocomplete="off">
+      <div id="cmd-feedback"></div>
+    </div>
+
+    <button id="start-btn">INITIALIZE LINK</button>
+  </div>
   <script type="module" src="/src/main.ts"></script>
 </body>
 
