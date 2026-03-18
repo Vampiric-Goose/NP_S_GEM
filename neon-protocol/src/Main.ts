@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
+import { CFG, WAVES, WEAPONS, tempVec, segmentVec, pointVec, closestPoint } from './game/constants';
+import type { GameState, InputState, Player } from './game/types';
 
 const CFG = {
     GRID: 100, CELL: 15, LIMIT: 0,
@@ -39,7 +41,7 @@ const WEAPONS = [
     { name: "FIFTH MAGIC", color: 0x00ffff, rate: 0.1, damage: 3, count: 1, spread: 0, ammo: 999, recoil: 0, type: 'magic', scale: [1, 1, 1], id: 7, sfx: 'charge', alt: 'casting', reloadTime: 0 }
 ];
 
-const state = {
+const state: GameState = {
     active: false, hp: 100, ammo: 30, score: 0, reloading: false, dashCd: 0, shake: 0,
     wave: 1, enemiesSpawnedInWave: 0, enemiesKilledInWave: 0, bossActive: false,
     currentWeapon: WEAPONS[0],
@@ -62,8 +64,8 @@ const state = {
     fifthMagic: { buffer: [], casting: false, lastInputTime: 0 }
 };
 
-const input = { fwd: 0, str: 0, jump: false, sprint: false, fire: false, alt: false, sacred: false, pitch: 0, yaw: 0 };
-const player = { pos: new THREE.Vector3(0, 10, 0), vel: new THREE.Vector3(), ground: false, height: 1.8, wallNormal: new THREE.Vector3() };
+const input: InputState = { fwd: 0, str: 0, jump: false, sprint: false, fire: false, alt: false, sacred: false, pitch: 0, yaw: 0 };
+const player: Player = { pos: new THREE.Vector3(0, 10, 0), vel: new THREE.Vector3(), ground: false, height: 1.8, wallNormal: new THREE.Vector3() };
 let currentGunMesh = null;
 let sacredGroup = null;
 
