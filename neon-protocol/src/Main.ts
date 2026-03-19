@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { playerController } from 'three-player-controller';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
@@ -626,13 +627,16 @@ function solveCollisions(pos, vel, radius) {
     }
 }
 
-function updatePhysics(dt) {
+function updatePhysics(dt: number, inputMove = null) {
     if (isNaN(player.pos.x)) player.pos.set(0, 50, 0);
     state.wallRun.active = false; state.wallRun.climbing = false;
     if (state.modes.timeStop) { player.vel.set(0, 0, 0); return; }
 
     player.vel.x -= player.vel.x * 8.0 * dt;
     player.vel.z -= player.vel.z * 8.0 * dt;
+    if (inputMove && inputMove.lengthSq() > 0.0001) {
+        player.vel.addScaledVector(inputMove, dt * 10.0);
+    }
     let speed = CFG.SPEED;
     if (input.sprint && state.stamina > 0 && state.canSprint) speed = CFG.SPRINT_SPEED;
     if (state.infinityActive) speed *= 1.5;
@@ -1319,11 +1323,19 @@ function animate() {
 
         if (state.fifthMagic.casting) move.set(0, 0, 0); // IMMOBILIZE IF CASTING
 
-        let speed = CFG.SPEED; if (input.sprint && state.stamina > 0 && state.canSprint) speed = CFG.SPRINT_SPEED; if (move.lengthSq() > 0) move.normalize().multiplyScalar(speed); player.vel.addScaledVector(move, dt * 10.0);
+        let speed = CFG.SPEED; if (input.sprint && state.stamina > 0 && state.canSprint) speed = CFG.SPRINT_SPEED; if (move.lengthSq() > 0) move.normalize().multiplyScalar(speed);
         if (input.jump) { if (player.ground) { let force = CFG.JUMP; if (input.sprint && state.canSprint && state.stamina > 0) { force *= 1.5 + (state.stamina / CFG.SPRINT_MAX) * 0.7; state.stamina = 0; state.canSprint = false; state.sprintCooldown = CFG.SPRINT_COOLDOWN; } player.vel.y = force; player.ground = false; Audio.playSound('jump'); input.jump = false; } else if (state.wallRun.active || state.wallRun.climbing) { player.vel.y = CFG.WALL_JUMP_FORCE; player.vel.addScaledVector(state.wallRun.normal, 30); state.wallRun.active = false; state.wallRun.climbing = false; Audio.playSound('jump'); input.jump = false; } }
-        if (input.grapple && state.currentWeapon.alt === 'grapple') fireGrapple(); else releaseGrapple(); updateGrapple(dt); updatePhysics(dt);
+        if (input.grapple && state.currentWeapon.alt === 'grapple') fireGrapple(); else releaseGrapple(); updateGrapple(dt); const SUBSTEPS = 8;
+        const subDt = dt / SUBSTEPS;
+        for (let i = 0; i < SUBSTEPS; i++) {
+            updatePhysics(subDt, move);
+        }
     }
-    input.jump = false; camera.position.copy(player.pos); camera.position.y += player.height;
+    input.jump = false;
+    const targetCamPos = new THREE.Vector3().copy(player.pos);
+    targetCamPos.y += player.height;
+    const followK = 40; // tweak 15-40 to taste
+    camera.position.lerp(targetCamPos, 1 - Math.exp(-followK * realDt));
     if (state.shake > 0) { camera.position.x += (Math.random() - 0.5) * state.shake; camera.position.y += (Math.random() - 0.5) * state.shake; state.shake = Math.max(0, state.shake - dt * 2); }
     gunGroup.position.z += (-0.5 - gunGroup.position.z) * 10 * realDt; if (state.currentWeapon.id !== 4 && state.currentWeapon.id !== 5) gunGroup.rotation.z = 0;
     if (gunLight.intensity > 0) gunLight.intensity -= realDt * 30;
